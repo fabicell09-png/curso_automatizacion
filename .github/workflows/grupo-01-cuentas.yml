@@ -43,17 +43,25 @@ jobs:
             --reporters cli,json \
             --reporter-json-export newman/grupo-01/newman-results.json
 
+ 
       - name: Generar informe PDF
         if: always()
         run: |
-          if [ -f newman/grupo-01/newman-results.json ]; then
+          if [[ -f newman/grupo-01/newman-results.json ]]; then
             python skills/postman-newman-skill/reporter/newman_report.py \
               --results newman/grupo-01/newman-results.json \
               --output newman/grupo-01/INFORME_GRUPO_01.pdf \
+              --banner skills/postman-newman-skill/reporter/assets/banner_portada.png \
+              --logo-aiquaa skills/postman-newman-skill/reporter/assets/logo_aiquaa_circle.png \
+              --logo-postman skills/postman-newman-skill/reporter/assets/logo_postman_clean.png \
+              --api-version "v2" \
+              --repo-url "${{ github.server_url }}/${{ github.repository }}" \
               --author "Grupo 01 - Cuentas Bancarias" \
-              --api-version "v2"
+              --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          else
+            echo "No se encontro el archivo de resultados Newman."
           fi
-
+          
       - name: Publicar resultados
         if: always()
         uses: actions/upload-artifact@v4
