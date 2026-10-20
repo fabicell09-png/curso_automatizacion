@@ -38,13 +38,18 @@ jobs:
         run: |
           mkdir -p newman/grupo-01
     
+            
           npx newman run postman/Grupo1_Tarea3_Coleccion.json \
+            --folder "CONSULTA SQL - TAREA 3.0" \
+            --folder "TAREA 3.0 - MOVIMIENTO CON VALIDACION SQL" \
+            --folder "TAREA 3.0 - MOVIMIENTO NEGATIVO CON VALIDACION SQL" \
             --env-var "base_url=https://aiquaa-sandbox-api.vercel.app" \
             --env-var "api_key=$API_KEY" \
             --reporters cli,json \
             --reporter-json-export newman/grupo-01/newman-results.json
 
 
+        
       - name: Generar informe PDF
         if: always()
         run: |
