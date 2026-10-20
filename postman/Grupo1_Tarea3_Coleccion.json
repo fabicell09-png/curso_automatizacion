@@ -1,0 +1,244 @@
+{
+  "info": {
+    "_postman_id": "33a44374-8297-4d54-b7a2-eb7c20bbeda7",
+    "name": "GRUPO 1 - TAREA 3.0 - VALIDACION SQL",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "56710198",
+    "_collection_link": "https://go.postman.co/collection/56710198-33a44374-8297-4d54-b7a2-eb7c20bbeda7?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "CUENTAS",
+      "item": [
+        {
+          "name": "CONSULTA SQL - TAREA 3.0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\npm.test(\"Consulta SQL ejecutada correctamente\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst respuesta = pm.response.json();\r\n\r\npm.test(\"La consulta devuelve una cuenta activa\", function () {\r\n    pm.expect(respuesta.data).to.be.an(\"array\");\r\n    pm.expect(respuesta.data.length).to.be.above(0);\r\n    pm.expect(respuesta.data[0].estado).to.eql(\"activa\");\r\n    pm.expect(respuesta.data[0].activa).to.eql(true);\r\n});\r\n\r\nif (pm.response.code === 200 &&\r\n    Array.isArray(respuesta.data) &&\r\n    respuesta.data.length > 0 &&\r\n    respuesta.data[0].estado === \"activa\" &&\r\n    respuesta.data[0].activa === true) {\r\n\r\n    const cuenta = respuesta.data[0];\r\n\r\n    pm.collectionVariables.set(\"cuenta_id\", cuenta.id);\r\n    pm.collectionVariables.set(\"saldo_inicial\", cuenta.saldo);\r\n\r\n    console.log(\"Cuenta obtenida:\", cuenta.id);\r\n    console.log(\"Saldo inicial:\", cuenta.saldo);\r\n}\r\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "x-api-key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "\r\n{\r\n  \"sql\": \"SELECT id, usuario_id, numero_cuenta, tipo_cuenta, moneda, saldo, estado, activa FROM cuentas WHERE estado = $1 AND activa = $2 ORDER BY id ASC LIMIT 1\",\r\n  \"params\": [\"activa\", true]\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/sql/select",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "sql",
+                "select"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TAREA 3.0 - MOVIMIENTO CON VALIDACION SQL",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\nconst baseUrl = pm.collectionVariables.get(\"base_url\");\r\nconst apiKey = pm.collectionVariables.get(\"api_key\");\r\n\r\n// Limpiar datos de ejecuciones anteriores\r\npm.collectionVariables.unset(\"cuenta_id\");\r\npm.collectionVariables.unset(\"saldo_inicial\");\r\n\r\nconst consulta = {\r\n    url: baseUrl + \"/api/v2/sql/select\",\r\n    method: \"POST\",\r\n    header: {\r\n        \"Content-Type\": \"application/json\",\r\n        \"x-api-key\": apiKey\r\n    },\r\n    body: {\r\n        mode: \"raw\",\r\n        raw: JSON.stringify({\r\n            sql: \"SELECT id, saldo FROM cuentas WHERE estado = $1 AND activa = $2 ORDER BY id ASC LIMIT 1\",\r\n            params: [\"activa\", true]\r\n        })\r\n    }\r\n};\r\n\r\ntry {\r\n    const response = await pm.sendRequest(consulta);\r\n\r\n    if (response.code !== 200) {\r\n        throw new Error(\"Error SQL: \" + response.code);\r\n    }\r\n\r\n    const resultado = response.json();\r\n\r\n    if (!Array.isArray(resultado.data) ||\r\n        resultado.data.length === 0) {\r\n        throw new Error(\"No se encontraron cuentas activas\");\r\n    }\r\n\r\n    const cuenta = resultado.data[0];\r\n\r\n    pm.collectionVariables.set(\"cuenta_id\", cuenta.id);\r\n    pm.collectionVariables.set(\"saldo_inicial\", cuenta.saldo);\r\n\r\n    console.log(\"Cuenta seleccionada:\", cuenta.id);\r\n    console.log(\"Saldo inicial:\", cuenta.saldo);\r\n\r\n} catch (error) {\r\n    console.error(\"Fallo en el Pre-request:\", error.message);\r\n\r\n    // Evitar ejecutar el POST si falla la consulta previa\r\n    pm.execution.skipRequest();\r\n}\r\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\nconst baseUrl = pm.collectionVariables.get(\"base_url\");\r\nconst apiKey = pm.collectionVariables.get(\"api_key\");\r\nconst cuentaId = Number(pm.collectionVariables.get(\"cuenta_id\"));\r\nconst saldoInicial = Number(pm.collectionVariables.get(\"saldo_inicial\"));\r\nconst monto = 1000;\r\n\r\npm.test(\"POST devuelve 201 Created\", function () {\r\n    pm.response.to.have.status(201);\r\n});\r\n\r\nif (pm.response.code === 201) {\r\n\r\n    const resultado = pm.response.json();\r\n    const movimiento = resultado.data;\r\n\r\n    pm.test(\"Movimiento registrado en la cuenta correcta\", function () {\r\n        pm.expect(Number(movimiento.cuenta_id)).to.eql(cuentaId);\r\n        pm.expect(movimiento.tipo).to.eql(\"credito\");\r\n        pm.expect(Number(movimiento.monto)).to.eql(monto);\r\n        pm.expect(movimiento.id).to.exist;\r\n    });\r\n\r\n    const movimientoId = Number(movimiento.id);\r\n\r\n    const consultaSQL = (sql, params) => ({\r\n        url: baseUrl + \"/api/v2/sql/select\",\r\n        method: \"POST\",\r\n        header: {\r\n            \"Content-Type\": \"application/json\",\r\n            \"x-api-key\": apiKey\r\n        },\r\n        body: {\r\n            mode: \"raw\",\r\n            raw: JSON.stringify({ sql, params })\r\n        }\r\n    });\r\n\r\n    // Validar el movimiento insertado\r\n    pm.sendRequest(\r\n        consultaSQL(\r\n            \"SELECT id, cuenta_id, tipo, monto, saldo_posterior, activo FROM movimientos WHERE id = $1\",\r\n            [movimientoId]\r\n        ),\r\n        function (error, response) {\r\n            pm.test(\"SQL: movimiento insertado correctamente\", function () {\r\n                pm.expect(error).to.equal(null);\r\n                pm.expect(response.code).to.eql(200);\r\n\r\n                const filas = response.json().data;\r\n                pm.expect(filas).to.be.an(\"array\").with.lengthOf(1);\r\n\r\n                const fila = filas[0];\r\n\r\n                pm.expect(Number(fila.id)).to.eql(movimientoId);\r\n                pm.expect(Number(fila.cuenta_id)).to.eql(cuentaId);\r\n                pm.expect(fila.tipo).to.eql(\"credito\");\r\n                pm.expect(Number(fila.monto)).to.eql(monto);\r\n                pm.expect(fila.activo).to.eql(true);\r\n                pm.expect(Number(fila.saldo_posterior))\r\n                    .to.be.closeTo(saldoInicial + monto, 0.001);\r\n            });\r\n        }\r\n    );\r\n\r\n    // Validar el saldo actualizado\r\n    pm.sendRequest(\r\n        consultaSQL(\r\n            \"SELECT id, saldo FROM cuentas WHERE id = $1\",\r\n            [cuentaId]\r\n        ),\r\n        function (error, response) {\r\n            pm.test(\"SQL: saldo de la cuenta actualizado\", function () {\r\n                pm.expect(error).to.equal(null);\r\n                pm.expect(response.code).to.eql(200);\r\n\r\n                const filas = response.json().data;\r\n                pm.expect(filas).to.be.an(\"array\").with.lengthOf(1);\r\n\r\n                const saldoFinal = Number(filas[0].saldo);\r\n                const saldoEsperado = saldoInicial + monto;\r\n\r\n                console.log(\"Saldo inicial:\", saldoInicial);\r\n                console.log(\"Movimiento:\", monto);\r\n                console.log(\"Saldo esperado:\", saldoEsperado);\r\n                console.log(\"Saldo final:\", saldoFinal);\r\n\r\n                pm.expect(saldoFinal)\r\n                    .to.be.closeTo(saldoEsperado, 0.001);\r\n            });\r\n        }\r\n    );\r\n}\r\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "x-api-key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "\r\n{\r\n  \"tipo\": \"credito\",\r\n  \"monto\": 1000,\r\n  \"descripcion\": \"Prueba automatizada Tarea 3.0 Grupo 1\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/cuentas/{{cuenta_id}}/movimientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cuentas",
+                "{{cuenta_id}}",
+                "movimientos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TAREA 3.0 - MOVIMIENTO NEGATIVO CON VALIDACION SQL",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\nconst baseUrl = pm.collectionVariables.get(\"base_url\");\r\nconst apiKey = pm.collectionVariables.get(\"api_key\");\r\n\r\n// Limpiar datos de ejecuciones anteriores\r\npm.collectionVariables.unset(\"cuenta_id\");\r\npm.collectionVariables.unset(\"saldo_inicial\");\r\npm.collectionVariables.unset(\"movimientos_antes\");\r\n\r\nconst consulta = {\r\n    url: baseUrl + \"/api/v2/sql/select\",\r\n    method: \"POST\",\r\n    header: {\r\n        \"Content-Type\": \"application/json\",\r\n        \"x-api-key\": apiKey\r\n    },\r\n    body: {\r\n        mode: \"raw\",\r\n        raw: JSON.stringify({\r\n            sql: \"SELECT id, saldo FROM cuentas WHERE estado = $1 AND activa = $2 ORDER BY id ASC LIMIT 1\",\r\n            params: [\"activa\", true]\r\n        })\r\n    }\r\n};\r\n\r\ntry {\r\n    const response = await pm.sendRequest(consulta);\r\n\r\n    if (response.code !== 200) {\r\n        throw new Error(\"Error SQL: \" + response.code);\r\n    }\r\n\r\n    const resultado = response.json();\r\n\r\n    if (!Array.isArray(resultado.data) ||\r\n        resultado.data.length === 0) {\r\n        throw new Error(\"No se encontraron cuentas activas\");\r\n    }\r\n\r\n    const cuenta = resultado.data[0];\r\n\r\n    pm.collectionVariables.set(\"cuenta_id\", cuenta.id);\r\n    pm.collectionVariables.set(\"saldo_inicial\", cuenta.saldo);\r\n\r\n    \r\nconst consultaConteo = {\r\n    url: baseUrl + \"/api/v2/sql/select\",\r\n    method: \"POST\",\r\n    header: {\r\n        \"Content-Type\": \"application/json\",\r\n        \"x-api-key\": apiKey\r\n    },\r\n    body: {\r\n        mode: \"raw\",\r\n        raw: JSON.stringify({\r\n            sql: \"SELECT COUNT(*) AS total FROM movimientos WHERE cuenta_id = $1\",\r\n            params: [Number(cuenta.id)]\r\n        })\r\n    }\r\n};\r\n\r\nconst respuestaConteo = await pm.sendRequest(consultaConteo);\r\n\r\nif (respuestaConteo.code !== 200) {\r\n    throw new Error(\"Error al contar movimientos\");\r\n}\r\n\r\nconst datosConteo = respuestaConteo.json();\r\n\r\nif (!Array.isArray(datosConteo.data) ||\r\n    datosConteo.data.length !== 1) {\r\n    throw new Error(\"Respuesta SQL de conteo inválida\");\r\n}\r\n\r\npm.collectionVariables.set(\r\n    \"movimientos_antes\",\r\n    datosConteo.data[0].total\r\n);\r\n\r\nconsole.log(\r\n    \"Movimientos antes:\",\r\n    datosConteo.data[0].total\r\n);\r\n\r\n\r\n    console.log(\"Cuenta seleccionada:\", cuenta.id);\r\n    console.log(\"Saldo inicial:\", cuenta.saldo);\r\n\r\n} catch (error) {\r\n    console.error(\"Fallo en el Pre-request:\", error.message);\r\n\r\n    // Evitar ejecutar el POST si falla la consulta previa\r\n    pm.execution.skipRequest();\r\n}\r\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "\r\nconst baseUrl = pm.collectionVariables.get(\"base_url\");\r\nconst apiKey = pm.collectionVariables.get(\"api_key\");\r\n\r\nconst cuentaId = Number(\r\n    pm.collectionVariables.get(\"cuenta_id\")\r\n);\r\n\r\nconst saldoInicial = Number(\r\n    pm.collectionVariables.get(\"saldo_inicial\")\r\n);\r\n\r\nconst movimientosAntes = Number(\r\n    pm.collectionVariables.get(\"movimientos_antes\")\r\n);\r\n\r\n// 1. Validar que la API rechace el monto negativo\r\npm.test(\"POST rechaza monto negativo con 400\", function () {\r\n    pm.response.to.have.status(400);\r\n});\r\n\r\n// Función para consultar la base de datos\r\nfunction consultaSQL(sql, params) {\r\n    return {\r\n        url: baseUrl + \"/api/v2/sql/select\",\r\n        method: \"POST\",\r\n        header: {\r\n            \"Content-Type\": \"application/json\",\r\n            \"x-api-key\": apiKey\r\n        },\r\n        body: {\r\n            mode: \"raw\",\r\n            raw: JSON.stringify({ sql, params })\r\n        }\r\n    };\r\n}\r\n\r\n// 2. Verificar que el saldo no cambió\r\npm.sendRequest(\r\n    consultaSQL(\r\n        \"SELECT saldo FROM cuentas WHERE id = $1\",\r\n        [cuentaId]\r\n    ),\r\n    function (error, response) {\r\n\r\n        pm.test(\"SQL: saldo permanece sin cambios\", function () {\r\n            pm.expect(error).to.equal(null);\r\n            pm.expect(response.code).to.eql(200);\r\n\r\n            const filas = response.json().data;\r\n\r\n            pm.expect(filas).to.be.an(\"array\")\r\n                .with.lengthOf(1);\r\n\r\n            const saldoFinal = Number(filas[0].saldo);\r\n\r\n            console.log(\"Saldo antes:\", saldoInicial);\r\n            console.log(\"Saldo después:\", saldoFinal);\r\n\r\n            pm.expect(saldoFinal)\r\n                .to.be.closeTo(saldoInicial, 0.001);\r\n        });\r\n    }\r\n);\r\n\r\n// 3. Verificar que no se insertaron movimientos\r\npm.sendRequest(\r\n    consultaSQL(\r\n        \"SELECT COUNT(*) AS total FROM movimientos WHERE cuenta_id = $1\",\r\n        [cuentaId]\r\n    ),\r\n    function (error, response) {\r\n\r\n        pm.test(\"SQL: no se insertaron movimientos\", function () {\r\n            pm.expect(error).to.equal(null);\r\n            pm.expect(response.code).to.eql(200);\r\n\r\n            const filas = response.json().data;\r\n\r\n            pm.expect(filas).to.be.an(\"array\")\r\n                .with.lengthOf(1);\r\n\r\n            const movimientosDespues = Number(\r\n                filas[0].total\r\n            );\r\n\r\n            console.log(\"Movimientos antes:\", movimientosAntes);\r\n            console.log(\"Movimientos después:\", movimientosDespues);\r\n\r\n            pm.expect(movimientosDespues)\r\n                .to.eql(movimientosAntes);\r\n        });\r\n    }\r\n);\r\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "x-api-key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{api_key}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "\r\n\r\n{\r\n  \"tipo\": \"credito\",\r\n  \"monto\": -500,\r\n  \"descripcion\": \"Tarea 3.0 - Validacion de monto negativo\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v2/cuentas/{{cuenta_id}}/movimientos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "cuentas",
+                "{{cuenta_id}}",
+                "movimientos"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "\r",
+          "console.log(\"Iniciando Tarea 3.0 - Grupo 1\");\r",
+          "\r",
+          "pm.collectionVariables.set(\"tarea\", \"3.0\");\r",
+          "\r",
+          "console.log(\"Pre-request configurado correctamente\");\r",
+          ""
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://aiquaa-sandbox-api.vercel.app"
+    },
+    {
+      "key": "cuenta_id",
+      "value": "1"
+    },
+    {
+      "key": "api_key",
+      "value": ""
+    },
+    {
+      "key": "tarea",
+      "value": ""
+    },
+    {
+      "key": "saldo_inicial",
+      "value": ""
+    },
+    {
+      "key": "movimientos_antes",
+      "value": ""
+    }
+  ]
+}
