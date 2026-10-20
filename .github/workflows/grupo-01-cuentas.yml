@@ -37,13 +37,14 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           mkdir -p newman/grupo-01
-
+    
           npx newman run postman/Grupo1_Tarea3_Coleccion.json \
+            --env-var "base_url=https://aiquaa-sandbox-api.vercel.app" \
             --env-var "api_key=$API_KEY" \
             --reporters cli,json \
             --reporter-json-export newman/grupo-01/newman-results.json
 
- 
+
       - name: Generar informe PDF
         if: always()
         run: |
