@@ -1,20 +1,28 @@
 
 import { Given, When, Then } from "@cucumber/cucumber";
+import { LoansWorld } from "../support/loans.world";
 
-// Grupo 01 - Cuentas Bancarias
-// Automatizacion BDD con Cucumber y Playwright
+// GRUPO 01 - CUENTAS BANCARIAS
 
-Given("que el cliente tiene una cuenta activa", async function () {
-  // Pendiente: preparar una cuenta activa de prueba
-  return "pending";
-});
+Given(
+  "que el cliente tiene una cuenta activa",
+  async function (this: LoansWorld) {
+    await this.cuentas.ingresarConCorreoAutorizado();
+    await this.cuentas.abrirAplicacion();
+    await this.cuentas.consultarCuentaActiva();
+  }
+);
 
-When("consulta el detalle de esa cuenta", async function () {
-  // Pendiente: consultar la cuenta mediante Playwright
-  return "pending";
-});
+When(
+  "consulta el detalle de esa cuenta",
+  async function (this: LoansWorld) {
+    await this.cuentas.consultarCuentaActiva();
+  }
+);
 
-Then("el sistema devuelve el saldo y la moneda de la cuenta", async function () {
-  // Pendiente: validar los datos de la cuenta
-  return "pending";
-});
+Then(
+  "el sistema devuelve el saldo y la moneda de la cuenta",
+  async function (this: LoansWorld) {
+    await this.cuentas.validarSaldoYMoneda();
+  }
+);
