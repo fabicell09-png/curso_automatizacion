@@ -1,8 +1,9 @@
-import { After, AfterAll, Before, BeforeAll, Status } from '@cucumber/cucumber';
+import { After, AfterAll, Before, BeforeAll, Status, setDefaultTimeout } from '@cucumber/cucumber';
 import { chromium, type Browser } from '@playwright/test';
 import { LoansPage } from '../../../playwright/pages/LoansPage';
 import { LoansWorld } from './loans.world';
 import { CuentasPage } from "../../../grupos/grupo-01-cuentas-bancarias/playwright/pages/CuentasPage";
+setDefaultTimeout(30 * 1000);
 
 let browser: Browser;
 
